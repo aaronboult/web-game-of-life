@@ -1,0 +1,169 @@
+/* Page Styling */
+
+*{
+    user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    -webkit-user-select: none;
+    text-align: center;
+}
+
+html{
+    background-color: rgb(105, 105, 105);
+}
+
+body{
+    background-color: rgb(105, 105, 105);
+}
+
+.PageHeading{
+    color: white;
+    height: 7.5vh;
+    margin: 0px;
+    line-height: 7.5vh;
+}
+
+/* Game Grid Controls */
+
+.ControlContainer{
+    color: white;
+    height: 12.5vh;
+    display: grid;
+    grid-template-areas: "dimensions simulation presets";
+    grid-template-columns: 25% 50% 25%;
+}
+
+.input-group{
+    width: 90%;
+    margin: auto;
+    margin-bottom: 0.25vh;
+}
+
+.Controls{
+    display: grid;
+    grid-template-areas: "Begin Stop"
+                        "Next Reset";
+    grid-gap: 0.25vh 0vw;
+}
+
+.Controls button{
+    width: 80%;
+    margin: auto;
+}
+
+.PresetSelect{
+    width: 80%;
+    text-align-last: center;
+    margin: auto;
+}
+
+/* Game Grid Display */
+
+#GridContainer{
+    margin: auto;
+    width: 80vw;
+    height: 80vh;
+    overflow: auto;
+}
+
+.Row{
+    width: fit-content;
+    white-space: nowrap;
+    margin: auto;
+    background-color: rgb(158, 158, 158);
+}
+
+.Row:nth-child(odd){
+    border: solid black;
+    border-width: 1px 0px 1px 0px;
+}
+
+.Row:last-child{
+    border-bottom: 1px solid black;
+}
+
+.Cell{
+    display: inline-block;
+    cursor: pointer;
+}
+
+.Cell:hover:not([cellchecked="true"]){
+    background-color: rgb(162, 255, 178);
+}
+
+.CellChecked{
+    background-color: #AFEEEE;
+}
+
+.Cell:nth-child(odd){
+    border: solid black;
+    border-width: 0px 1px 0px 1px;
+}
+
+.Cell:last-child{
+    border-right: 1px solid black;
+}
+
+/* Buttoms */
+
+.btn, .btn:hover{
+    color: white;
+}
+
+.btn-begin{
+    background-color: rgba(0, 197, 0, 0.75);
+    border-color: rgb(0, 197, 0, 0.5);
+}
+
+.btn-next{
+    background-color: rgb(0, 197, 148, 0.75);
+    border-color: rgb(0, 197, 148, 0.5);
+}
+
+.btn-stop{
+    background-color: rgb(219, 106, 0, 0.75);
+    border-color: rgb(219, 106, 0, 0.5);
+    color: white;
+}
+
+.btn-reset{
+    background-color: rgb(197, 0, 0, 0.75);
+    border-color: rgb(197, 0, 0, 0.5);
+}
+
+.btn-begin:hover:not(:disabled), .btn-begin:active:not(:disabled), .btn-begin:focus:not(:disabled),
+.btn-next:hover:not(:disabled), .btn-next:active:not(:disabled), .btn-next:focus:not(:disabled),
+.btn-stop:hover:not(:disabled), .btn-stop:active:not(:disabled), .btn-stop:focus:not(:disabled),
+.btn-reset:hover:not(:disabled), .btn-reset:active:not(:disabled), .btn-reset:focus:not(:disabled){
+    color: rgb(202, 202, 202);
+}
+
+/* Responsive Display */
+
+.ResponsiveControl{
+    overflow: auto;
+    height: fit-content;
+}
+
+@media screen and (max-width: 735px){
+    
+    .ControlContainer{
+        grid-template-areas: "dimensions"
+                            "simulation"
+                            "presets";
+        grid-template-columns: 100%;
+        grid-template-rows: auto;
+    }
+
+    .ResponsiveControl{
+        margin: auto;
+        margin-bottom: 2.5vh;
+        width: 80%;
+    }
+
+    #GridContainer{
+        width: 100vw;
+        margin-bottom: 5vh;
+    }
+
+}

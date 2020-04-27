@@ -60,7 +60,7 @@ $(function(){
         switch($(this).val()){
 
             case "0":
-                DrawPlaceholder([
+                DrawPreset([
                     [1, 0],
                     [2, 1],
                     [0, 2],
@@ -69,7 +69,7 @@ $(function(){
                 ]);
                 break;
             case "1":
-                DrawPlaceholder([
+                DrawPreset([
                     [3, 1], // Line (3 coordinates on the line)
                     [4, 1],
                     [5, 1],
@@ -102,7 +102,7 @@ $(function(){
 
 });
 
-function DrawPlaceholder(coordinates){
+function DrawPreset(coordinates){
 
     for (let i = 0 ; i < coordinates.length ; i++){
 
@@ -112,6 +112,7 @@ function DrawPlaceholder(coordinates){
 
 }
 
+// Update the grid to show the next generation of cells
 function RefreshGrid(){
     
     grid = [];
@@ -207,6 +208,7 @@ function CheckIndexBounds(index, max){
 
 }
 
+// Clear the interval set to constantly evolve the simulation
 function TryClearRefresher(){
 
     if (gridRefresher){

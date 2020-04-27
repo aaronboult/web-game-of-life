@@ -102,6 +102,10 @@ $(function(){
 
 });
 
+/**
+ * Select a given predetermined set of cells on the grid
+ * @param {number[][]} coordinates The cells to select for the preset
+ */
 function DrawPreset(coordinates){
 
     for (let i = 0 ; i < coordinates.length ; i++){
@@ -112,7 +116,9 @@ function DrawPreset(coordinates){
 
 }
 
-// Update the grid to show the next generation of cells
+/**
+ * Update the grid to show the next generation of cells
+ */
 function RefreshGrid(){
     
     grid = [];
@@ -172,6 +178,12 @@ function RefreshGrid(){
 
 }
 
+/**
+ * 
+ * @param {number} x The x coordinate of the current cell
+ * @param {number} y The y coordinate of the current cell
+ * @param {boolean[][]} grid The grid of cells
+ */
 function GetNumberOfLiveNeighbors(x, y, grid){
 
     let neighbors = 0;
@@ -202,13 +214,20 @@ function GetNumberOfLiveNeighbors(x, y, grid){
 
 }
 
+/**
+ * Check whether the given index lies within a valid range
+ * @param {number} index The current index
+ * @param {number} max The highest value the given index can be
+ */
 function CheckIndexBounds(index, max){
 
     return index >= 0 && index < max;
 
 }
 
-// Clear the interval set to constantly evolve the simulation
+/**
+ * Clear the interval set to constantly evolve the simulation
+ */
 function TryClearRefresher(){
 
     if (gridRefresher){
@@ -221,6 +240,10 @@ function TryClearRefresher(){
     
 }
 
+/**
+ * Get the length, in cells, of the given dimension
+ * @param {string} dimension Either 'Width' or 'Height'
+ */
 function GetDimension(dimension){
             
     let value = parseInt($(`#${dimension}Input`).val());
@@ -237,6 +260,9 @@ function GetDimension(dimension){
 
 }
 
+/**
+ * Create and inject the grid of given width and height onto the DOM
+ */
 function GenerateGrid(){
 
     TryClearRefresher();
@@ -314,6 +340,9 @@ function GenerateGrid(){
 
 }
 
+/**
+ * Change the height and width of each cell depending on the size of the page
+ */
 function ResizeGrid(){
             
     let width = GetDimension("Width");

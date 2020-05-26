@@ -16,6 +16,15 @@ body{
     background-color: rgb(105, 105, 105);
 }
 
+oldbrowser{
+    display: none;
+}
+
+noscript, oldbrowser{
+    font-size: 1.5em;
+    color: white;
+}
+
 .PageHeading{
     color: white;
     height: 7.5vh;
@@ -164,6 +173,18 @@ body{
     #GridContainer{
         width: 100vw;
         margin-bottom: 5vh;
+    }
+
+}
+
+@supports not (display: grid){
+
+    #ContentWrapper{
+        display: none;
+    }
+
+    oldbrowser{
+        display: block;
     }
 
 }

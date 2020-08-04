@@ -1,211 +1,474 @@
-let cursorDown = false;
-let gridRefresher;
+let leftMouseDown = false;
+let rightMouseDown = false;
 
-$(function(){
-    
-    $("#WidthInput").val(24);
+let touchMoved;
 
-    $("#HeightInput").val(24);
+let previousCellUpdate = {}; // id: the id of the previous cell, which: the mousebutton identifier (from event.which)
 
-    window.onresize = ResizeGrid
+let gridUpdateInterval;
 
-    $("#WidthInput").on("change", GenerateGrid);
-    
-    $("#HeightInput").on("change", GenerateGrid);
+let presets = [ // Each preset is an object containing the X and Y sizes of the grid, as well as the necessary cell values
+    {
+        name: "Glider",
+        xSize: 9,
+        ySize: 9,
+        data: [
+            [false, true, false],
+            [false, false, true],
+            [true, true, true]
+        ]
+    }
+];
 
-    $("#BeginButton").click(function(){
+function initialize(){
 
-        gridRefresher = setInterval(RefreshGrid, 1000);
+    let presetHtml = "<option value=-1>None</option>";
 
-        $(this).prop("disabled", true);
+    for (let i = 0 ; i < presets.length ; i++){
 
-    });
-
-    $("#NextButton").click(function(){
-
-        RefreshGrid();
-        
-        if (gridRefresher){
-
-            clearInterval(gridRefresher);
-
-            gridRefresher = setInterval(RefreshGrid, 1000);
-
-        }
-
-    });
-
-    $("#StopButton").click(function(){
-        
-        TryClearRefresher();
-
-        $("#BeginButton").prop("disabled", false);
-
-    });
-
-    $("#ResetButton").click(function(){
-        
-        TryClearRefresher();
-
-        GenerateGrid();
-
-        $("#BeginButton").prop("disabled", false);
-
-    });
-
-    $("#GridPresets").on("change", function(){
-
-        $("#ResetButton").click();
-
-        switch($(this).val()){
-
-            case "0":
-                DrawPreset([
-                    [1, 0],
-                    [2, 1],
-                    [0, 2],
-                    [1, 2],
-                    [2, 2]
-                ]);
-                break;
-            case "1":
-                DrawPreset([
-                    [3, 1], // Line (3 coordinates on the line)
-                    [4, 1],
-                    [5, 1],
-
-                    [1, 3], // Line (3 coordinates on the line)
-                    [1, 4],
-                    [1, 5],
-
-                    [3, 7], // Line (3 coordinates on the line)
-                    [4, 7],
-                    [5, 7],
-
-                    [7, 3], // Line (3 coordinates on the line)
-                    [7, 4],
-                    [7, 5],
-                ]);
-                break;
-
-        }
-
-    })
-
-    GenerateGrid();
-
-    $("#GridContainer").mousedown((e) => { cursorDown = true; e.target.focus() });
-
-    window.onmouseup = () => cursorDown = false;
-
-    window.ondrag = (e) => e.preventDefault();
-
-});
-
-/**
- * Select a given predetermined set of cells on the grid
- * @param {number[][]} coordinates The cells to select for the preset
- */
-function DrawPreset(coordinates){
-
-    for (let i = 0 ; i < coordinates.length ; i++){
-
-        $(`#Cell-${coordinates[i][1]}-${coordinates[i][0]}`).click();
+        presetHtml += `<option value=${i}>${presets[i].name}</option>`;
 
     }
+
+    document.getElementById("preset-select").innerHTML = presetHtml;
+    
+    document.getElementById("preset-select").onchange = event => {
+
+        const presetIndex = parseInt(
+            document.getElementById("preset-select").value
+        );
+
+        resetGrid();
+
+        if (presetIndex === -1){ // -1 is the value of the "none" option
+
+            return;
+
+        }
+
+        const chosenPreset = presets[presetIndex];
+
+        document.getElementById("axis-x-size").value = chosenPreset.xSize;
+
+        document.getElementById("axis-y-size").value = chosenPreset.ySize;
+
+        writeCellData(
+            chosenPreset.data
+        );
+
+    };
+
+    const axisX = document.getElementById("axis-x-size");
+
+    const axisY = document.getElementById("axis-y-size");
+    
+    axisX.onchange = createUniverse;
+
+    axisY.onchange = createUniverse;
+
+    let tableSize = 16;
+
+    if (window.matchMedia("screen and (max-width: 800px)").matches){ // Generate a small table for smaller screens
+
+        tableSize = 9;
+
+    }
+
+    axisX.value = tableSize;
+
+    axisY.value = tableSize;
+
+    window.onmousedown = event => {
+        
+        if (event.which === 1){
+
+            leftMouseDown = true;
+
+        }
+        else if (event.which === 3){
+
+            rightMouseDown = true;
+
+        }
+
+    };
+
+    window.onmouseup = event => {
+
+        if (event.which === 1){
+
+            leftMouseDown = false;
+
+        }
+        else if (event.which === 3){
+
+            rightMouseDown = false;
+
+        }
+
+    };
+
+    window.onmousemove = event => {
+        
+        if (leftMouseDown){
+
+            toggleCell(event, true);
+
+        }
+
+        if (rightMouseDown){
+
+            toggleCell(event, false);
+
+        }
+
+        event.preventDefault();
+
+    };
+
+    window.onkeydown = handleKeybind;
+
+    document.getElementById("play").onclick = playSimulation;
+
+    document.getElementById("stop").onclick = stopSimulation;
+
+    document.getElementById("step").onclick = updateGrid;
+
+    document.getElementById("reset").onclick = resetGrid;
+
+    document.getElementById("timescale").onchange = () => {
+
+        if (gridUpdateInterval){ // Restart the simulation on timescale change to update the interval period
+
+            stopSimulation();
+    
+            playSimulation();
+
+        }
+
+    };
+
+    const universeGrid = document.getElementById("universe-grid");
+
+    universeGrid.oncontextmenu = () => {
+
+        toggleCell(event, false);
+
+        return false;
+
+    }; // Use right click to clear cells
+
+    universeGrid.ontouchmove = event => {
+
+        touchMoved = true;
+
+        const target = document.elementFromPoint(
+            event.changedTouches[0].clientX,
+            event.changedTouches[0].clientY,
+        );
+
+        toggleCell(
+            {
+                target: target,
+                type: "touchmove",
+                which: 0
+            }, // Pass a mimic of the event object using the correct target element
+            target.getAttribute("alive") === "false"
+        );
+
+        event.preventDefault();
+
+    };
+    
+    createUniverse();
 
 }
 
-/**
- * Update the grid to show the next generation of cells
- */
-function RefreshGrid(){
-    
-    grid = [];
-            
-    let width = GetDimension("Width");
+function createUniverse(event){
 
-    let height = GetDimension("Height");
+    stopSimulation();
 
-    if (!(width >= 10 && width <= 32) || !(height >= 10 && height <= 32)){
+    const [xSize, ySize] = getGridSize();
 
-        $("#WidthInput").val(10);
+    const cellData = getCellValues();
 
-        $("#HeightInput").val(10);
+    document.getElementById("axis-x-size-display").innerText = xSize;
 
-        return GenerateGrid();
+    document.getElementById("axis-y-size-display").innerText = ySize;
 
-    }
+    let gridHtml = "";
 
-    for (let y = 0 ; y < height ; y++){
+    for (let y = 0 ; y < ySize ; y++){
 
-        grid.push([]);
+        gridHtml += "<tr>";
 
-        for (let x = 0 ; x < width ; x++){
+        for (let x = 0 ; x < xSize ; x++){
 
-            grid[y].push($(`#Cell-${y}-${x}`).attr("cellchecked") === "true");
-    
-        }   
+            let alive = false;
 
-    }
+            if (y < cellData.length){ // If the current cell is within the bounds of the preserved data
 
-    let neighbors;
-    
-    for (let y = 0 ; y < height ; y++){
+                if (x < cellData[y].length){
 
-        for (let x = 0 ; x < width ; x++){
-
-            neighbors = GetNumberOfLiveNeighbors(x, y, grid);
-
-            if (neighbors === 3 || (neighbors === 2 && grid[y][x])){
-
-                $(`#Cell-${y}-${x}`).attr("cellchecked", "true");
-
-                $(`#Cell-${y}-${x}`).addClass("CellChecked")
-
-            }
-            else{
-
-                $(`#Cell-${y}-${x}`).attr("cellchecked", "false");
-
-                $(`#Cell-${y}-${x}`).removeClass("CellChecked")
-
-            }
-
-        }
-
-    }
-
-}
-
-/**
- * 
- * @param {number} x The x coordinate of the current cell
- * @param {number} y The y coordinate of the current cell
- * @param {boolean[][]} grid The grid of cells
- */
-function GetNumberOfLiveNeighbors(x, y, grid){
-
-    let neighbors = 0;
-
-    for (let yOffset = -1 ; yOffset < 2 ; yOffset++){
-        
-        for (let xOffset = -1 ; xOffset < 2 ; xOffset++){
-    
-            if (!(yOffset === 0 && xOffset === 0)){
-
-                if (CheckIndexBounds(y + yOffset, grid.length) && CheckIndexBounds(x + xOffset, grid[0].length)){
-
-                    if (grid[y + yOffset][x + xOffset]){
-                        
-                        neighbors++;
-
-                    }
+                    alive = cellData[y][x];
 
                 }
 
             }
+            
+            gridHtml += `
+                <td class="cell" id="cell-${y}-${x}" alive=${alive}></td>
+            `;
 
+        }
+
+        gridHtml += "</tr>";
+
+    }
+
+    document.getElementById("grid").innerHTML = gridHtml;
+
+    for (let y = 0 ; y < ySize ; y++){
+
+        for (let x = 0 ; x < xSize ; x++){
+
+            const cell = document.getElementById(`cell-${y}-${x}`);
+
+            cell.ontouchend = event => {
+
+                if (!touchMoved){ // Ensure the first cell is not toggle again after a drag
+                    
+                    toggleCell(
+                        event, 
+                        event.target.getAttribute("alive") === "false"
+                    );
+
+                }
+
+                touchMoved = false;
+
+                event.preventDefault(); // Stop a click event firing
+
+            };
+
+            cell.onclick = event => {
+                
+                if (event.which === 1){
+
+                    toggleCell(event, true);
+
+                }
+
+            };
+
+        }
+
+    }
+
+}
+
+function handleKeybind(event){
+
+    switch (event.keyCode){
+
+        case 32: // Space
+            if (gridUpdateInterval){ // Toggle between play and stop
+                stopSimulation();
+            }
+            else{
+                playSimulation();
+            }
+            break;
+        
+        case 39: // Right arrow
+            updateGrid();
+            break;
+
+        case 82: // R
+            resetGrid();
+            break;
+
+    }
+
+}
+
+function playSimulation(event){
+
+    if (gridUpdateInterval){
+
+        clearInterval(gridUpdateInterval);
+
+    }
+
+    gridUpdateInterval = setInterval(
+        updateGrid,
+        parseInt(
+            document.getElementById("timescale").value
+        )
+    );
+
+    document.getElementById("play").disabled = true;
+
+}
+
+function stopSimulation(event){
+
+    clearInterval(gridUpdateInterval);
+
+    gridUpdateInterval = null;
+
+    document.getElementById("play").disabled = false;
+
+}
+
+function resetGrid(){
+    
+    stopSimulation();
+
+    const [xSize, ySize] = getGridSize();
+
+    for (let x = 0 ; x < xSize ; x++){
+
+        for (let y = 0 ; y < ySize ; y++){
+
+            document.getElementById(`cell-${y}-${x}`).setAttribute("alive", false);
+
+        }
+
+    }
+
+}
+
+function getCellValues(){
+
+    const cells = [];
+
+    const [xSize, ySize] = getGridSize();
+
+    for (let y = 0 ; y < ySize ; y++){
+
+        cells.push([]);
+
+        for (let x = 0 ; x < xSize ; x++){
+
+            const cell = document.getElementById(`cell-${y}-${x}`);
+
+            if (cell){
+
+                cells[
+                    cells.length - 1
+                ].push(
+                    cell.getAttribute("alive") === "true"
+                );
+
+            }
+
+        }
+
+    }
+    
+    return cells;
+
+}
+
+function getGridSize(){
+
+    return [
+        parseInt(
+            document.getElementById("axis-x-size").value
+        ),
+        parseInt(
+            document.getElementById("axis-y-size").value
+        )
+    ];
+
+}
+
+function toggleCell(event, value){
+    
+    if (event.target.classList.contains("cell")){
+
+        if (
+            event.target.id !== previousCellUpdate.id ||
+            event.which !== previousCellUpdate.which ||
+            event.type === "touchend"
+        ){ // touchend events toggle cells so they pass regardless of previous actions
+
+            previousCellUpdate.id = event.target.id;
+
+            previousCellUpdate.which = event.which;
+
+            event.target.setAttribute("alive", value);
+
+        }
+
+    }
+
+}
+
+function updateGrid(){
+
+    let newCellData = [];
+
+    const currentCellData = getCellValues();
+
+    for (let y = 0 ; y < currentCellData.length ; y++){
+
+        newCellData.push([]);
+
+        for (let x = 0 ; x < currentCellData[y].length ; x++){
+
+            const neighbors = getNumberOfNeighbors(x, y, currentCellData);
+
+            if (neighbors === 3 || (currentCellData[y][x] && neighbors === 2)){ // Either the cell is alive with 2 neighbors, or it is dead or alive with 3 neighbors
+
+                newCellData[y].push(true);
+
+            }
+            else{
+
+                newCellData[y].push(false);
+
+            }
+
+        }
+
+    }
+
+    writeCellData(newCellData);
+
+}
+
+function getNumberOfNeighbors(x, y, data){
+
+    let neighbors = 0;
+
+    for (let yOffset = -1 ; yOffset <= 1 ; yOffset++){ // Check all 8 possible neighbors using x and y offsets from -1 to 1
+
+        for (let xOffset = -1 ; xOffset <= 1 ; xOffset++){
+
+            if (!(yOffset === 0 && xOffset === 0)){ // Ensure the cell itself is not included
+
+                const yPosition = y + yOffset;
+    
+                if (yPosition >= 0 && yPosition < data.length){ // Check the y position is within the bounds of the grid
+    
+                    const xPosition = x + xOffset;
+    
+                    if (xPosition >= 0 && xPosition < data[yPosition].length){ // Check the x position is within the bounds of the grid
+    
+                        if (data[yPosition][xPosition]){
+    
+                            neighbors++;
+    
+                        }
+    
+                    }
+    
+                }
+
+            }
+    
         }
 
     }
@@ -214,190 +477,28 @@ function GetNumberOfLiveNeighbors(x, y, grid){
 
 }
 
-/**
- * Check whether the given index lies within a valid range
- * @param {number} index The current index
- * @param {number} max The highest value the given index can be
- */
-function CheckIndexBounds(index, max){
+function writeCellData(data){
 
-    return index >= 0 && index < max;
+    const [xSize, ySize] = getGridSize();
 
-}
+    for (let y = 0 ; y < ySize ; y++){
 
-/**
- * Clear the interval set to constantly evolve the simulation
- */
-function TryClearRefresher(){
+        if (y < data.length){
 
-    if (gridRefresher){
+            for (let x = 0 ; x < xSize ; x++){
 
-        clearInterval(gridRefresher);
-
-        gridRefresher = null;
-
-    }
+                if (x < data[y].length){
     
-}
+                    document.getElementById(`cell-${y}-${x}`).setAttribute(
+                        "alive", data[y][x]
+                    );
 
-/**
- * Get the length, in cells, of the given dimension
- * @param {string} dimension Either 'Width' or 'Height'
- */
-function GetDimension(dimension){
-            
-    let value = parseInt($(`#${dimension}Input`).val());
-
-    if (isNaN(value)){
-
-        value = 10;
-
-        $(`#${dimension}Input`).val(10);
-
-    }
-
-    return value;
-
-}
-
-/**
- * Create and inject the grid of given width and height onto the DOM
- */
-function GenerateGrid(){
-
-    TryClearRefresher();
-            
-    let width = GetDimension("Width");
-
-    let height = GetDimension("Height");
-
-    if (!(width >= 10 && width <= 32) || !(height >= 10 && height <= 32)){
-
-        $("#WidthInput").val(10);
-
-        $("#HeightInput").val(10);
-
-        return GenerateGrid();
-
-    }
-
-    $("#GridContainer").html("");
-
-    for (let y = 0 ; y < height ; y++){
-
-        $("#GridContainer").append(`<div id='Row-${y}' class='Row'></div>`);
-    
-        for (let x = 0 ; x < width ; x++){
-    
-            $(`#Row-${y}`).append(`<div class='Cell' id='Cell-${y}-${x}'></div>`);
-
-        }
-            
-    }
-
-    ResizeGrid()
-
-    $(".Cell").each(function(){
-
-        $(this).mouseenter(function(){
-            
-            if (cursorDown){
-
-                $(this).attr("entered", "false");
-                
-                $(this).click();
-
-            }
-            else{
-
-                $(this).attr("entered", "true");
-
-            }
-
-        });
-
-        $(this).mouseleave(function(){
-
-            if ($(this).attr("entered") === "true" && cursorDown){
-
-                $(this).click();
-
-            }
-
-            $(this).attr("entered", "false");
-
-        });
-
-        $(this).click(function(){
-            
-            $(this).toggleClass("CellChecked");
-
-            $(this).attr("cellChecked", !$(this).attr("cellChecked") || $(this).attr("cellChecked") === "false");
-
-        });
-
-    });
-
-}
-
-/**
- * Change the height and width of each cell depending on the size of the page
- */
-function ResizeGrid(){
-            
-    let width = GetDimension("Width");
-
-    let height = GetDimension("Height");
-
-    if (!(width >= 10 && width <= 32) || !(height >= 10 && height <= 32)){
-
-        $("#WidthInput").val(10);
-
-        $("#HeightInput").val(10);
-
-        return GenerateGrid();
-
-    }
-
-    let cellWidth;
-
-    let cellHeight;
-            
-    $("#GridContainer").css("height", "");
-    
-    if ($("#GridContainer").width() < $("#GridContainer").height()){
-
-        cellWidth = $("#GridContainer").width() / width;
-    
-        cellHeight = $("#GridContainer").width() / height;
+                }
         
-        if (window.matchMedia("screen and (max-width: 735px)").matches){
-            
-            $("#GridContainer").css("height", $("#GridContainer").width().toString() + "px");
-    
-        }
-
-    }
-    else{
-
-        cellWidth = $("#GridContainer").height() / width;
-    
-        cellHeight = $("#GridContainer").height() / height;
-
-    }
-
-    for (let y = 0 ; y < height ; y++){
-
-        $(`#Row-${y}`).css("height", `${cellHeight - 2}px`)
-    
-        for (let x = 0 ; x < width ; x++){
-
-            $(`#Cell-${y}-${x}`).css("width", `${cellWidth - 2}px`)
-
-            $(`#Cell-${y}-${x}`).css("height", `${cellHeight - 2}px`)
+            }
 
         }
-            
+
     }
 
 }

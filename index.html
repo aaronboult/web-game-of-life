@@ -3,53 +3,116 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script src="https://code.jquery.com/jquery-3.5.0.min.js" integrity="sha256-xNzN2a4ltkB44Mc/Jz3pT4iU1cmeR0FkXs4pru/JxaQ=" crossorigin="anonymous"></script>
     <script src="page.js"></script>
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="index.css">
     <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
     <title>Game Of Life</title>
 </head>
-<body onload="document.getElementById('ContentWrapper').style.display = 'block'">
-    <noscript>Please enable javascript</noscript>
-    <oldbrowser>Please, use a modern browser.</oldbrowser>
-    <div style="display: none;width: 100vw;height: 100vh;" id="ContentWrapper">
-        <h1 class="PageHeading">Game Of Life</h1>
-        <div id="GridContainer"></div>
-        <div class="ControlContainer">
-            <div class="ResponsiveControl" style="grid-area: dimensions;">
-                <h5>Grid Dimensions</h5>
-                <div class="input-group">
-                    <div class="input-group-prepend">
-                        <label class="input-group-text" for="WidthInput">Grid Width</label>
+<body>
+    <noscript>Please enable javascript.</noscript>
+    <h1 style="display: none;" id="browser-upgrade">Please Upgrade Your Browser</h1>
+    <div id="noscript-hide" style="display: none;overflow: auto;">
+        <div id="info-wrapper">
+            <div id="info-hover">
+                ?
+                <div id="info">
+                    <h3>
+                        Conway's Game of Life!
+                    </h3>
+                    <p>
+                        Rules:
+                        <ul>
+                            <li>Any living cell with 2 or 3 nighbors survives</li>
+                            <li>Any dead cell with exactly 3 neighbors comes to life</li>
+                            <li>All other cells die</li>
+                        </ul>
+                    </p>
+                    <div id="keybindings-wrapper">
+                        <p>
+                            Keybindings:
+                            <ul>
+                                <li>Space to play/stop</li>
+                                <li>Right arrow to step</li>
+                                <li>R to reset</li>
+                            </ul>
+                        </p>
                     </div>
-                    <input class="form-control" placeholder="10" type="number" min="10" max="38" id="WidthInput">
-                </div>
-                <div class="input-group">
-                    <div class="input-group-prepend">
-                        <label class="input-group-text" for="HeightInput">Grid Height</label>
-                    </div>
-                    <input class="form-control" placeholder="10" type="number" min="10" max="38" id="HeightInput">
+                    <p>
+                        <a target="_blank" href="https://github.com/aaronboult/web-game-of-life">GitHub Page</a>
+                    </p>
                 </div>
             </div>
-            <div class="ResponsiveControl" style="grid-area: simulation;">
-                <h5>Simulation Controls</h5>
-                <div class="Controls">
-                    <button id="BeginButton" class="btn btn-begin" style="grid-area: Begin;">Begin</button>
-                    <button id="NextButton" class="btn btn-next" style="grid-area: Next;">Next</button>
-                    <button id="StopButton" class="btn btn-stop" style="grid-area: Stop;">Stop</button>
-                    <button id="ResetButton" class="btn btn-reset" style="grid-area: Reset;">Reset</button>
+        </div>
+        <h1 id="page-heading">
+            Game of Life
+        </h1>
+        <div id="universe-grid-wrapper">
+            <table id="universe-grid">
+                <tbody id="grid">
+
+                </tbody>
+            </table>
+        </div>
+        <div id="controls">
+            <div id="simulation-controls">
+                <button id="play">Play</button>
+                <button id="stop">Stop</button>
+                <button id="step">Step</button>
+                <button id="reset">Rest</button>
+                <div id="timescale-wrapper">
+                    <label for="timescale">Timescale</label>
+                    <input id="timescale" type="range" min="10" max="2000" value="1000">
                 </div>
             </div>
-            <div class="ResponsiveControl" style="grid-area: presets;">
-                <h5>Presets</h5>
-                <select id="GridPresets" class="form-control PresetSelect">
+            <div id="presets">
+                <label for="preset-select">Presets</label>
+                <select id="preset-select">
                     <option value="-1">None</option>
-                    <option value="0">Glider</option>
-                    <option value="1">Alternator</option>
                 </select>
+            </div>
+            <div id="dimensions">
+                <div>
+                    <label for="axis-x-size">
+                        X Axis:
+                        <span id="axis-x-size-display"></span>
+                    </label>
+                    <input id="axis-x-size" type="range" min="1" max="32">
+                </div>
+                <div>
+                    <label for="axis-y-size">
+                        Y Axis: 
+                        <span id="axis-y-size-display"></span>
+                    </label>
+                    <input id="axis-y-size" type="range" min="1" max="32">
+                </div>
             </div>
         </div>
     </div>
 </body>
+<script type="text/javascript">
+    function checkES6(){
+        if (typeof Symbol == "undefined"){
+            return false;
+        }
+        try{
+            eval("class Test {}");
+            eval("let arrow = (x) => true");
+        }
+        catch (e){
+            return false;
+        }
+        return true;
+    };
+    (function(){
+        if (checkES6()){
+            document.getElementById("browser-upgrade").style.display = "none";
+            document.getElementById("noscript-hide").style.display = "block";
+            initialize();
+        }
+        else{
+            document.getElementById("browser-upgrade").style.display = "block";
+            document.getElementById("noscript-hide").style.display = "none";
+        }
+    })();
+</script>
 </html>

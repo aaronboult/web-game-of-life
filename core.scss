@@ -57,18 +57,8 @@ body{
         text-align: initial;
     }
 
-    a{
-        &, &:link, &:visited{
-            color: #9bedff;
-        }
-
-        &:hover{
-            color: #7dcbdd;
-        }
-
-        &:active{
-            color: #90def0;
-        }
+    a img:hover{
+        opacity: 0.7;
     }
 
     @media screen and (max-width: 1200px){

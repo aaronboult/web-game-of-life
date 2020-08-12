@@ -32,31 +32,7 @@ function initialize(){
 
     document.getElementById("preset-select").innerHTML = presetHtml;
     
-    document.getElementById("preset-select").onchange = event => {
-
-        const presetIndex = parseInt(
-            document.getElementById("preset-select").value
-        );
-
-        resetGrid();
-
-        if (presetIndex === -1){ // -1 is the value of the "none" option
-
-            return;
-
-        }
-
-        const chosenPreset = presets[presetIndex];
-
-        document.getElementById("axis-x-size").value = chosenPreset.xSize;
-
-        document.getElementById("axis-y-size").value = chosenPreset.ySize;
-
-        writeCellData(
-            chosenPreset.data
-        );
-
-    };
+    document.getElementById("preset-select").onchange = resetGrid;
 
     const axisX = document.getElementById("axis-x-size");
 
@@ -114,15 +90,17 @@ function initialize(){
 
             toggleCell(event, true);
 
+            event.preventDefault();
+
         }
 
         if (rightMouseDown){
 
             toggleCell(event, false);
 
-        }
+            event.preventDefault();
 
-        event.preventDefault();
+        }
 
     };
 
@@ -167,16 +145,20 @@ function initialize(){
             event.changedTouches[0].clientY,
         );
 
-        toggleCell(
-            {
-                target: target,
-                type: "touchmove",
-                which: 0
-            }, // Pass a mimic of the event object using the correct target element
-            target.getAttribute("alive") === "false"
-        );
+        if (target.classList.contains("cell")){
 
-        event.preventDefault();
+            toggleCell(
+                {
+                    target: target,
+                    type: "touchmove",
+                    which: 0
+                }, // Pass a mimic of the event object using the correct target element
+                target.getAttribute("alive") === "false"
+            );
+    
+            event.preventDefault();
+
+        }
 
     };
     
@@ -321,7 +303,39 @@ function stopSimulation(event){
 
 }
 
-function resetGrid(){
+function setPreset(event){
+
+    const presetIndex = parseInt(
+        document.getElementById("preset-select").value
+    );
+
+    if (presetIndex === -1){ // -1 is the value of the "none" option
+
+        return;
+
+    }
+
+    const chosenPreset = presets[presetIndex];
+
+    const [xSize, ySize] = getGridSize();
+
+    if (xSize < chosenPreset.xSize || ySize < chosenPreset.ySize){
+
+        document.getElementById("axis-x-size").value = chosenPreset.xSize;
+    
+        document.getElementById("axis-y-size").value = chosenPreset.ySize;
+    
+        createUniverse();
+
+    }
+
+    writeCellData(
+        chosenPreset.data
+    );
+
+}
+
+function resetGrid(event){
     
     stopSimulation();
 
@@ -331,11 +345,15 @@ function resetGrid(){
 
         for (let y = 0 ; y < ySize ; y++){
 
-            document.getElementById(`cell-${y}-${x}`).setAttribute("alive", false);
+            document.getElementById(`cell-${y}-${x}`).setAttribute(
+                "alive", false
+            );
 
         }
 
     }
+
+    setPreset();
 
 }
 
@@ -478,7 +496,7 @@ function getNumberOfNeighbors(x, y, data){
 }
 
 function writeCellData(data){
-
+    
     const [xSize, ySize] = getGridSize();
 
     for (let y = 0 ; y < ySize ; y++){
